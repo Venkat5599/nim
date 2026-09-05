@@ -1,0 +1,142 @@
+/* Light, soft, consumer-app surface.
+   White cards floating on a faintly tinted ground, generous radii, tinted
+   shadows rather than grey ones. Nimiq amber is the accent; navy survives
+   as the ink colour. */
+
+:root {
+  color-scheme: light;
+
+  --ground: #fbf7ef;
+  --ground-2: #f6f0e4;
+
+  --card: #ffffff;
+  --card-pressed: #f7f3ec;
+
+  --fill-warm: linear-gradient(145deg, #fff2cf 0%, #ffe4a3 100%);
+  --fill-cool: linear-gradient(145deg, #eef0fb 0%, #dfe3f6 100%);
+
+  --ink: #1f2348;
+  --ink-2: #5b6083;
+  --ink-3: #8c91ad;
+
+  --tint: #e9a70f;
+  --tint-deep: #c98a06;
+  --tint-soft: #ffeec4;
+  --cool: #5b6bd6;
+  --danger: #d6455b;
+
+  --hairline: rgba(31, 35, 72, 0.07);
+  --shadow-card: 0 1px 2px rgba(31, 35, 72, 0.04), 0 8px 24px rgba(31, 35, 72, 0.05);
+  --shadow-lift: 0 2px 6px rgba(201, 138, 6, 0.18);
+
+  --r-card: 24px;
+  --r-inner: 18px;
+  --r-control: 16px;
+
+  --pad: 20px;
+  --gap-xs: 6px;
+  --gap-sm: 10px;
+  --gap: 16px;
+  --gap-lg: 22px;
+  --gap-xl: 30px;
+
+  --tap: 44px;
+  --cta-height: 54px;
+
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: contain;
+}
+
+body {
+  min-height: 100dvh;
+  /* One continuous surface: the wash deepens toward the bottom rather than
+     stopping at a hard seam behind the tab bar. */
+  background-image: linear-gradient(180deg, var(--ground) 0%, var(--ground-2) 100%);
+  background-attachment: fixed;
+}
+
+#app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input {
+  font: inherit;
+  font-size: 16px;
+  color: inherit;
+  border: 0;
+  background: none;
+}
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--pad) 120px;
+  max-width: 520px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+}
+
+.section-label {
+  margin: var(--gap-xl) 0 var(--gap-sm);
+  color: var(--ink-3);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.footnote {
+  margin: var(--gap-sm) 0 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@import "./app.css";
