@@ -4,3 +4,12 @@ dist
 .env.local
 .DS_Store
 *.log
+
+.vercel
+.env*
+
+# agent tooling, not part of the submission
+.agents/
+.claude/
+skills-lock.json
+.vercel/
