@@ -147,6 +147,13 @@ export function isPlaceholderAddress(address: string): boolean {
   return /^NQ\d{2}0+$/.test(digits)
 }
 
+/** Short, readable form of a Nimiq address. */
+export function shortAddressSafe(address: string): string {
+  const clean = address.trim()
+  if (clean.length <= 16) return clean
+  return `${clean.slice(0, 11)}...${clean.slice(-4)}`
+}
+
 /** Short form of a transaction hash for display. */
 export function shortHash(hash: string): string {
   return hash.length <= 16 ? hash : `${hash.slice(0, 8)}...${hash.slice(-6)}`

@@ -24,6 +24,7 @@
   } from '../lib/staking'
   import { runTx, payment, resetPayment } from '../lib/payment'
   import { formatNim, nimToLuna } from '../lib/units'
+  import { addActivity, rememberValidator } from '../lib/activity'
   import { locale } from '../lib/i18n'
 
   const MIN_MOVE_LUNA = nimToLuna(10)
@@ -157,17 +158,29 @@
     busy = true
     try {
       const amount = plan.amountLuna
-      await runTx(amount, () => {
-        switch (plan.action) {
+      const kind = plan.action
+      await runTx(amount, async () => {
+        let hash: string
+        switch (kind) {
           case 'stake':
-            return plan.isFirstTime ? startStaking(validator.trim(), amount) : addStake(amount)
+            hash = plan.isFirstTime
+              ? await startStaking(validator.trim(), amount)
+              : await addStake(amount)
+            if (plan.isFirstTime) rememberValidator(validator.trim())
+            break
           case 'retire':
-            return retireStake(amount)
+            hash = await retireStake(amount)
+            break
           case 'remove':
-            return removeStake(amount)
+            hash = await removeStake(amount)
+            break
           default:
             throw new Error('no action')
         }
+        // Logged only after a hash comes back, so the list never contains a
+        // transaction that was cancelled or never broadcast.
+        addActivity({ txHash: hash, kind, amountLuna: amount, at: Date.now() })
+        return hash
       })
     } finally {
       busy = false

@@ -3,6 +3,8 @@ import { writable } from 'svelte/store'
 export type Route =
   | { name: 'home' }
   | { name: 'float' }
+  | { name: 'activity' }
+  | { name: 'validators' }
   | { name: 'pot'; potId: string }
   | { name: 'contribute'; potId: string }
   | { name: 'new' }
@@ -18,6 +20,8 @@ function parse(pathname: string): Route {
       : { name: 'pot', potId: parts[1] }
   }
   if (parts[0] === 'float') return { name: 'float' }
+  if (parts[0] === 'activity') return { name: 'activity' }
+  if (parts[0] === 'validators') return { name: 'validators' }
   if (parts[0] === 'new') return { name: 'new' }
   if (parts[0] === 'mine') return { name: 'mine' }
   return { name: 'home' }
