@@ -16,7 +16,7 @@
     min-height: var(--cta-height);
     padding: 0 var(--gap);
     background: var(--tint);
-    color: #241a00;
+    color: #ffffff;
     font-size: 17px;
     font-weight: 600;
     border-radius: var(--r-control);

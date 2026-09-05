@@ -1,76 +1,101 @@
 <script lang="ts">
-  // iOS tab bar: translucent material, hairline top edge, icon above a small
-  // label, tint colour marking the selected tab. No sliding pill, no dot.
-  import { ChartPieSlice, ClockCounterClockwise, ShieldCheck } from 'phosphor-svelte'
+  // Five slots with a raised centre action, the shape the reference uses.
+  // The centre button performs the app's one real action rather than opening
+  // a menu, so the most prominent control does the most useful thing.
+  import { House, ClockCounterClockwise, ShieldCheck, ChartDonut, Plus } from 'phosphor-svelte'
   import { route, navigate } from '../lib/router'
 
-  const TABS = [
-    { name: 'float', path: '/', label: 'Balance', icon: ChartPieSlice },
-    { name: 'activity', path: '/activity', label: 'Activity', icon: ClockCounterClockwise },
-    { name: 'validators', path: '/validators', label: 'Validator', icon: ShieldCheck },
-  ] as const
+  let { onAction, actionEnabled = false }: { onAction?: () => void; actionEnabled?: boolean } =
+    $props()
 
   const r = $derived($route)
-  const isActive = (n: string) => n === r.name || (n === 'float' && r.name === 'home')
+  const active = (n: string) => n === r.name || (n === 'float' && r.name === 'home')
 </script>
 
-<nav class="tabbar">
-  {#each TABS as tab}
-    {@const active = isActive(tab.name)}
-    <button class="tab" class:active onclick={() => navigate(tab.path)}>
-      <tab.icon
-        size={25}
-        weight={active ? 'fill' : 'regular'}
-        color={active ? 'var(--tint)' : 'var(--label-3)'}
-      />
-      <span>{tab.label}</span>
-    </button>
-  {/each}
+<nav class="bar">
+  <button class="slot" class:on={active('float')} onclick={() => navigate('/')}>
+    <House size={22} weight={active('float') ? 'fill' : 'regular'} />
+    <span>Home</span>
+  </button>
+
+  <button class="slot" class:on={active('activity')} onclick={() => navigate('/activity')}>
+    <ClockCounterClockwise size={22} weight={active('activity') ? 'fill' : 'regular'} />
+    <span>History</span>
+  </button>
+
+  <button class="fab" disabled={!actionEnabled} onclick={() => onAction?.()} aria-label="Rebalance">
+    <Plus size={24} weight="bold" />
+  </button>
+
+  <button class="slot" class:on={active('validators')} onclick={() => navigate('/validators')}>
+    <ShieldCheck size={22} weight={active('validators') ? 'fill' : 'regular'} />
+    <span>Validator</span>
+  </button>
+
+  <button class="slot" onclick={() => navigate('/')}>
+    <ChartDonut size={22} />
+    <span>Insight</span>
+  </button>
 </nav>
 
 <style>
-  .tabbar {
+  .bar {
     position: fixed;
-    left: 0;
-    right: 0;
+    left: 50%;
     bottom: 0;
+    transform: translateX(-50%);
     z-index: 10;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    padding-bottom: env(safe-area-inset-bottom);
-    background: var(--chrome);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-    box-shadow: inset 0 1px 0 var(--separator);
+    grid-template-columns: repeat(5, 1fr);
+    align-items: center;
+    width: 100%;
+    max-width: 520px;
+    padding: 10px var(--gap) calc(10px + env(safe-area-inset-bottom));
+    background: var(--card);
+    border-radius: var(--r-card) var(--r-card) 0 0;
+    box-shadow: 0 -1px 0 var(--hairline), 0 -10px 30px rgba(31, 35, 72, 0.06);
   }
 
-  /* Where blur is unavailable the bar must still be opaque, never a
-     see-through smear over scrolling content. */
-  @supports not (backdrop-filter: blur(20px)) {
-    .tabbar {
-      background: var(--bg);
-    }
-  }
-
-  .tab {
+  .slot {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: 3px;
-    min-height: 49px;
-    padding: 7px 0 6px;
-    color: var(--label-3);
-    font-size: 10px;
-    letter-spacing: 0.06px;
+    min-height: var(--tap);
+    color: var(--ink-3);
+    font-size: 11px;
   }
 
-  .tab.active {
-    color: var(--tint);
-    font-weight: 500;
+  .slot.on {
+    color: var(--ink);
+    font-weight: 600;
   }
 
-  .tab:active {
+  .slot:active {
     opacity: 0.55;
+  }
+
+  .fab {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto;
+    background: var(--tint);
+    color: #fff;
+    border-radius: 50%;
+    /* Tight, colour-matched, single direction. Not a bloom. */
+    box-shadow: var(--shadow-lift);
+    transition: transform 140ms ease, opacity 140ms ease;
+  }
+
+  .fab:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  .fab:disabled {
+    background: var(--ink-3);
+    box-shadow: none;
+    opacity: 0.45;
   }
 </style>

@@ -1,11 +1,12 @@
 <script lang="ts">
-  // Balance screen, built on iOS conventions: large title, a hero figure,
-  // then inset grouped lists. Every interactive value is tinted; every
-  // static value is secondary grey.
-  import PrimaryButton from '../components/PrimaryButton.svelte'
-  import Row from '../components/Row.svelte'
-  import ChainStatus from '../components/ChainStatus.svelte'
+  // Home, in the reference's shape: greeting header, a hero figure paired
+  // with a visual, a two-up stat row on soft fills, then a labelled list.
+  //
+  // The visual is a real allocation ring driven by actual balances rather
+  // than a decorative illustration, so the largest graphic on screen is
+  // carrying data.
   import PaymentState from './PaymentState.svelte'
+  import { Bell, Lightning } from 'phosphor-svelte'
   import { getAddress, readBalance, isInsideNimiqPay } from '../lib/nimiq'
   import {
     readStaker,
@@ -19,8 +20,9 @@
   } from '../lib/staking'
   import { runTx, payment, resetPayment } from '../lib/payment'
   import { formatNim, nimToLuna } from '../lib/units'
-  import { addActivity, rememberValidator } from '../lib/activity'
+  import { addActivity, rememberValidator, readActivity, describe } from '../lib/activity'
   import { locale } from '../lib/i18n'
+  import { registerAction } from '../lib/action'
 
   const MIN_MOVE_LUNA = nimToLuna(10)
   const FLOOR_KEY = 'float:floor'
@@ -39,6 +41,7 @@
   let validator = $state('')
   let busy = $state(false)
   let floorNim = $state(loadFloor())
+  let recent = $state(readActivity().slice(0, 3))
 
   function loadFloor(): number {
     try {
@@ -74,13 +77,12 @@
   )
 
   const showState = $derived($payment.status !== 'idle')
+  const ratio = $derived(totalLuna > 0 ? stk.activeLuna / totalLuna : 0)
 
-  function pct(n: number): number {
-    return totalLuna > 0 ? (n / totalLuna) * 100 : 0
-  }
+  // Ring geometry
+  const R = 52
+  const C = 2 * Math.PI * R
 
-  // The figure counts to its target after a transaction, because the number
-  // moving is the confirmation that something happened.
   let shown = $state(0)
   $effect(() => {
     const target = stk.activeLuna
@@ -93,7 +95,7 @@
     const start = performance.now()
     let raf = 0
     const step = (now: number) => {
-      const t = Math.min(1, (now - start) / 520)
+      const t = Math.min(1, (now - start) / 560)
       shown = from + (target - from) * (1 - Math.pow(1 - t, 3))
       if (t < 1) raf = requestAnimationFrame(step)
     }
@@ -144,8 +146,13 @@
     }
   }
 
+  const needsValidator = $derived(
+    plan.action === 'stake' && plan.isFirstTime && validator.trim().length < 10,
+  )
+  const canAct = $derived(plan.action !== 'none' && isLive && !busy && !needsValidator)
+
   async function execute() {
-    if (plan.action === 'none' || busy || !isLive) return
+    if (!canAct) return
     busy = true
     try {
       const amount = plan.amountLuna
@@ -171,14 +178,23 @@
         addActivity({ txHash: hash, kind, amountLuna: amount, at: Date.now() })
         return hash
       })
+      recent = readActivity().slice(0, 3)
     } finally {
       busy = false
     }
   }
 
-  const needsValidator = $derived(
-    plan.action === 'stake' && plan.isFirstTime && validator.trim().length < 10,
-  )
+  // The centre button in the tab bar drives this screen's action.
+  $effect(() => registerAction(canAct ? execute : null))
+
+  function when(ts: number): string {
+    const s = Math.max(0, (Date.now() - ts) / 1000)
+    if (s < 60) return 'just now'
+    const m = Math.floor(s / 60)
+    if (m < 60) return `${m}m ago`
+    const h = Math.floor(m / 60)
+    return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`
+  }
 </script>
 
 {#if showState}
@@ -191,68 +207,95 @@
   />
 {:else}
   <div class="screen">
-    <h1 class="large-title">Balance</h1>
+    <header class="greeting">
+      <div>
+        <p class="hello">Your NIM</p>
+        <p class="sub">Keep some ready, put the rest to work</p>
+      </div>
+      <button class="chip" aria-label="Status">
+        <Bell size={19} weight="regular" color="var(--ink-2)" />
+      </button>
+    </header>
 
-    <section class="hero">
-      <p class="hero-cap">Earning</p>
-      <p class="figure tabular">
-        {formatNim(shown, locale)}<span class="unit">NIM</span>
-      </p>
+    <section class="card hero">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 128 128" class="ring" aria-hidden="true">
+          <circle cx="64" cy="64" r={R} fill="none" stroke="var(--ground-2)" stroke-width="14" />
+          <circle
+            cx="64"
+            cy="64"
+            r={R}
+            fill="none"
+            stroke="var(--tint)"
+            stroke-width="14"
+            stroke-linecap="round"
+            stroke-dasharray={C}
+            stroke-dashoffset={C * (1 - ratio)}
+            transform="rotate(-90 64 64)"
+          />
+        </svg>
+        <span class="ring-pct tabular">{Math.round(ratio * 100)}%</span>
+      </div>
 
-      <div class="bar" aria-hidden="true">
-        <span class="seg working" style="flex-basis: {pct(stk.activeLuna)}%"></span>
-        {#if stk.retiredLuna > 0}
-          <span class="seg waiting" style="flex-basis: {pct(stk.retiredLuna)}%"></span>
-        {/if}
-        <span class="seg liquid" style="flex-basis: {pct(liquid)}%"></span>
+      <div class="hero-figures">
+        <p class="goal tabular">Total {formatNim(totalLuna, locale)}</p>
+        <p class="figure tabular">{formatNim(shown, locale)}</p>
+        <p class="cap">NIM earning</p>
       </div>
     </section>
 
-    <div class="group">
-      <Row label="Working" value="{formatNim(stk.activeLuna, locale)} NIM" />
-      {#if stk.retiredLuna > 0}
-        <Row label="Waiting" value="{formatNim(stk.retiredLuna, locale)} NIM" />
-      {/if}
-      <Row label="Spendable" value="{formatNim(liquid, locale)} NIM" last />
+    <div class="pair">
+      <div class="stat warm">
+        <p class="stat-label">Spendable</p>
+        <p class="stat-value tabular">{formatNim(liquid, locale)}</p>
+        <p class="stat-sub tabular">floor {formatNim(floorLuna, locale)}</p>
+      </div>
+      <div class="stat cool">
+        <p class="stat-label">{stk.retiredLuna > 0 ? 'Waiting' : 'Working'}</p>
+        <p class="stat-value tabular">
+          {formatNim(stk.retiredLuna > 0 ? stk.retiredLuna : stk.activeLuna, locale)}
+        </p>
+        <p class="stat-sub">{stk.retiredLuna > 0 ? 'in its window' : 'delegated'}</p>
+      </div>
     </div>
 
-    <p class="group-header">Your rule</p>
-    <div class="group">
-      <Row label="Keep spendable" last>
-        {#snippet children()}
-          <span class="field-wrap">
-            <input
-              class="field tabular"
-              type="text"
-              inputmode="decimal"
-              aria-label="NIM to keep spendable"
-              bind:value={floorNim}
-              onchange={() => saveFloor(Number(floorNim))}
-            />
-            <span class="field-unit">NIM</span>
-          </span>
-        {/snippet}
-      </Row>
-    </div>
-    <p class="footnote">Anything above this works. Everything below stays ready to spend.</p>
+    <section class="card rule">
+      <div class="rule-text">
+        <p class="rule-label">Keep spendable</p>
+        <p class="rule-sub">Everything above this works for you</p>
+      </div>
+      <div class="rule-field">
+        <input
+          class="tabular"
+          type="text"
+          inputmode="decimal"
+          aria-label="NIM to keep spendable"
+          bind:value={floorNim}
+          onchange={() => saveFloor(Number(floorNim))}
+        />
+        <span>NIM</span>
+      </div>
+    </section>
 
     {#if plan.action === 'stake' && plan.isFirstTime}
-      <p class="group-header">Validator</p>
-      <div class="group">
-        <Row label="Delegate to" last>
-          {#snippet children()}
-            <input class="addr" bind:value={validator} placeholder="NQ..." spellcheck="false" />
-          {/snippet}
-        </Row>
-      </div>
-      <p class="footnote">Your NIM stays in your own account.</p>
+      <section class="card rule">
+        <div class="rule-text">
+          <p class="rule-label">Validator</p>
+          <p class="rule-sub">Your NIM stays in your own account</p>
+        </div>
+        <div class="rule-field wide">
+          <input bind:value={validator} placeholder="NQ..." spellcheck="false" />
+        </div>
+      </section>
     {/if}
 
-    <p class="group-header">Next</p>
-    <div class="group">
-      <Row label={planLabel(plan)} tint={plan.action !== 'none'} last />
-    </div>
-    <p class="footnote">{planExplain(plan)}</p>
+    <section class="card next" class:idle={plan.action === 'none'}>
+      <span class="next-icon"><Lightning size={20} weight="fill" color="var(--tint-deep)" /></span>
+      <div>
+        <p class="next-title">{planLabel(plan)}</p>
+        <p class="next-detail">{planExplain(plan)}</p>
+      </div>
+    </section>
 
     {#if readFailed}
       <p class="footnote danger">
@@ -262,106 +305,289 @@
     {:else if !isLive}
       <p class="footnote">Example figures. Open inside Nimiq Pay to see your own balance.</p>
     {/if}
-
     {#if !isInsideNimiqPay()}
       <p class="footnote">This runs as a Nimiq Pay mini app.</p>
     {/if}
 
-    <ChainStatus />
-
-    <div class="spacer"></div>
-
-    <div class="dock">
-      <PrimaryButton
-        label={planLabel(plan)}
-        disabled={plan.action === 'none' || busy || !isLive || needsValidator}
-        onclick={execute}
-      />
-    </div>
+    <p class="section-label">Recent</p>
+    {#if recent.length}
+      <div class="list">
+        {#each recent as e (e.txHash)}
+          <div class="card item">
+            <div>
+              <p class="item-title">{describe(e.kind)}</p>
+              <p class="item-time">{when(e.at)}</p>
+            </div>
+            {#if e.amountLuna > 0}
+              <span class="item-amt tabular">+{formatNim(e.amountLuna, locale)}</span>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <div class="card empty">
+        <p>Your moves will appear here with their transaction hash.</p>
+      </div>
+    {/if}
   </div>
 {/if}
 
 <style>
-  .hero {
-    padding: 0 var(--gap) var(--gap-lg);
+  .greeting {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--gap);
+    padding: var(--gap-lg) 0 var(--gap-lg);
   }
 
-  .hero-cap {
-    margin: 0 0 var(--gap-xs);
-    color: var(--label-3);
-    font-size: 15px;
+  .hello {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+
+  .sub {
+    margin: 2px 0 0;
+    color: var(--ink-3);
+    font-size: 14px;
+  }
+
+  .chip {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    background: var(--card);
+    border-radius: 50%;
+    box-shadow: var(--shadow-card);
+    flex: none;
+  }
+
+  .hero {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-lg);
+    padding: var(--gap-lg) var(--gap-lg);
+  }
+
+  .ring-wrap {
+    position: relative;
+    width: 108px;
+    height: 108px;
+    flex: none;
+  }
+
+  .ring {
+    width: 100%;
+    height: 100%;
+  }
+
+  .ring circle:last-child {
+    transition: stroke-dashoffset 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .ring-pct {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 19px;
+    font-weight: 700;
+  }
+
+  .hero-figures {
+    min-width: 0;
+  }
+
+  .goal {
+    margin: 0;
+    color: var(--ink-3);
+    font-size: 13px;
   }
 
   .figure {
-    margin: 0;
-    font-size: 44px;
+    margin: 2px 0 0;
+    font-size: 40px;
     font-weight: 700;
-    line-height: 1.05;
-    letter-spacing: -0.5px;
+    line-height: 1;
+    letter-spacing: -1px;
   }
 
-  .unit {
-    margin-left: 0.28em;
-    color: var(--tint);
-    font-size: 0.4em;
-    font-weight: 600;
-    letter-spacing: 0;
+  .cap {
+    margin: 4px 0 0;
+    color: var(--ink-2);
+    font-size: 14px;
   }
 
-  .bar {
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-sm);
+    margin-top: var(--gap-sm);
+  }
+
+  .stat {
+    padding: var(--gap) var(--gap);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .stat.warm {
+    background: var(--fill-warm);
+  }
+
+  .stat.cool {
+    background: var(--fill-cool);
+  }
+
+  .stat-label {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .stat-value {
+    margin: 6px 0 0;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+  }
+
+  .stat-sub {
+    margin: 2px 0 0;
+    color: var(--ink-3);
+    font-size: 12px;
+  }
+
+  .rule {
     display: flex;
-    gap: 3px;
-    height: 8px;
-    margin-top: var(--gap-lg);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap);
+    margin-top: var(--gap-sm);
+    padding: var(--gap) var(--gap-lg);
   }
 
-  .seg {
-    flex-grow: 0;
-    flex-shrink: 1;
-    min-width: 3px;
-    border-radius: 999px;
-    transition: flex-basis 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  .rule-label {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
   }
 
-  .seg.working { background: var(--tint); }
-  .seg.waiting { background: var(--label-3); }
-  .seg.liquid  { background: var(--well); }
+  .rule-sub {
+    margin: 2px 0 0;
+    color: var(--ink-3);
+    font-size: 13px;
+  }
 
-  .field-wrap {
+  .rule-field {
     display: flex;
     align-items: baseline;
     gap: 5px;
+    flex: none;
+    color: var(--tint-deep);
+    font-weight: 700;
   }
 
-  .field {
+  .rule-field input {
     width: 5ch;
-    color: var(--tint);
-    font-size: 17px;
-    font-weight: 600;
+    color: var(--tint-deep);
+    font-size: 20px;
+    font-weight: 700;
     text-align: right;
     outline: none;
   }
 
-  .field-unit {
-    color: var(--label-3);
+  .rule-field span {
+    font-size: 13px;
+  }
+
+  .rule-field.wide {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rule-field.wide input {
+    width: 100%;
     font-size: 15px;
   }
 
-  .addr {
-    width: 100%;
-    min-width: 0;
-    color: var(--tint);
-    font-size: 17px;
-    text-align: right;
-    outline: none;
+  .next {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--gap-sm);
+    margin-top: var(--gap-sm);
+    padding: var(--gap) var(--gap-lg);
+  }
+
+  .next.idle {
+    opacity: 0.6;
+  }
+
+  .next-icon {
+    display: block;
+    padding-top: 2px;
+    flex: none;
+  }
+
+  .next-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .next-detail {
+    margin: 2px 0 0;
+    color: var(--ink-3);
+    font-size: 13px;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap);
+    padding: var(--gap-sm) var(--gap-lg);
+  }
+
+  .item-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .item-time {
+    margin: 2px 0 0;
+    color: var(--ink-3);
+    font-size: 12px;
+  }
+
+  .item-amt {
+    color: var(--tint-deep);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .empty {
+    padding: var(--gap-lg);
+    color: var(--ink-3);
+    font-size: 14px;
+  }
+
+  .empty p {
+    margin: 0;
   }
 
   .footnote.danger {
     color: var(--danger);
-  }
-
-  .spacer {
-    flex: 1;
-    min-height: var(--gap-xl);
   }
 </style>

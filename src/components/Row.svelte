@@ -41,7 +41,7 @@
       <span class="value" class:tint>{value}</span>
     {/if}
     {#if chevron}
-      <CaretRight size={15} weight="bold" color="var(--label-3)" />
+      <CaretRight size={15} weight="bold" color="var(--ink-3)" />
     {/if}
   </span>
 </svelte:element>
@@ -66,7 +66,7 @@
     right: 0;
     bottom: 0;
     height: 1px;
-    background: var(--separator);
+    background: var(--hairline);
   }
 
   .interactive:active {
@@ -75,7 +75,7 @@
 
   .label {
     font-size: 17px;
-    color: var(--label);
+    color: var(--ink);
   }
 
   .trailing {
@@ -86,7 +86,7 @@
   }
 
   .value {
-    color: var(--label-2);
+    color: var(--ink-2);
     font-size: 17px;
     overflow: hidden;
     text-overflow: ellipsis;

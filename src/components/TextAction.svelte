@@ -13,7 +13,7 @@
     display: block;
     width: 100%;
     min-height: var(--tap);
-    color: var(--tint);
+    color: var(--tint-deep);
     font-size: 17px;
     text-align: center;
   }

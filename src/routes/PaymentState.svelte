@@ -52,7 +52,7 @@
     <!-- Bare marks. Never an icon inside a tile, circle or badge. -->
     {#if s.status === 'submitting' || s.status === 'pending'}
       <svg class="mark spin" viewBox="0 0 48 48" aria-hidden="true">
-        <circle cx="24" cy="24" r="20" fill="none" stroke="var(--well)" stroke-width="3" />
+        <circle cx="24" cy="24" r="20" fill="none" stroke="var(--ground-2)" stroke-width="3" />
         <path d="M24 4 a20 20 0 0 1 20 20" fill="none" stroke="var(--tint)"
               stroke-width="3" stroke-linecap="round" />
       </svg>
@@ -63,7 +63,7 @@
       </svg>
     {:else if s.status === 'cancelled'}
       <svg class="mark" viewBox="0 0 48 48" aria-hidden="true">
-        <path d="M15 15 l18 18 M33 15 l-18 18" fill="none" stroke="var(--label-3)"
+        <path d="M15 15 l18 18 M33 15 l-18 18" fill="none" stroke="var(--ink-3)"
               stroke-width="3" stroke-linecap="round" />
       </svg>
     {:else if s.status === 'failed'}

@@ -12,7 +12,7 @@
     background: linear-gradient(
       90deg,
       var(--card) 0%,
-      var(--card-pressed) 50%,
+      var(--ground-2) 50%,
       var(--card) 100%
     );
     background-size: 200% 100%;

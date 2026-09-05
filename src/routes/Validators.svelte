@@ -107,7 +107,7 @@
   .addr {
     width: 100%;
     min-width: 0;
-    color: var(--tint);
+    color: var(--tint-deep);
     font-size: 17px;
     text-align: right;
     outline: none;

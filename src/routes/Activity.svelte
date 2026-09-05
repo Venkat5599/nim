@@ -81,7 +81,7 @@
     right: 0;
     bottom: 0;
     height: 1px;
-    background: var(--separator);
+    background: var(--hairline);
   }
 
   .left {
@@ -96,12 +96,12 @@
   }
 
   .meta {
-    color: var(--label-3);
+    color: var(--ink-3);
     font-size: 13px;
   }
 
   .amt {
-    color: var(--label-2);
+    color: var(--ink-2);
     font-size: 17px;
   }
 

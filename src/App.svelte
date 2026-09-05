@@ -3,6 +3,7 @@
   import Activity from './routes/Activity.svelte'
   import Validators from './routes/Validators.svelte'
   import TabBar from './components/TabBar.svelte'
+  import { action } from './lib/action'
   import Pot from './routes/Pot.svelte'
   import Contribute from './routes/Contribute.svelte'
   import NewPot from './routes/NewPot.svelte'
@@ -54,7 +55,7 @@
   {/key}
 </main>
 
-<TabBar />
+<TabBar actionEnabled={!!$action} onAction={() => $action?.()} />
 
 <style>
   .app {

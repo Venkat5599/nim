@@ -1,49 +1,47 @@
-/* iOS-flavoured token set, rendered on the web.
-   Structure follows Apple's dark grouped-content model: a recessed page
-   background with elevated content groups sitting on it, separated by
-   hairlines rather than borders. Brand navy replaces Apple's neutral greys
-   and amber replaces the system blue tint. */
+/* Light, soft, consumer-app surface.
+   White cards floating on a faintly tinted ground, generous radii, tinted
+   shadows rather than grey ones. Nimiq amber is the accent; navy survives
+   as the ink colour. */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* Backgrounds */
-  --bg: #14162f;              /* grouped page background, recessed */
-  --card: #1f2348;            /* elevated content group */
-  --card-pressed: #262a55;
-  --well: #101228;            /* insets inside a card */
+  --ground: #fbf7ef;
+  --ground-2: #f6f0e4;
 
-  /* Materials */
-  --chrome: rgba(20, 22, 47, 0.72);
-  --separator: rgba(255, 255, 255, 0.08);
+  --card: #ffffff;
+  --card-pressed: #f7f3ec;
 
-  /* Content */
-  --label: #ffffff;
-  --label-2: #a0a5c5;
-  --label-3: #8e92b2;
+  --fill-warm: linear-gradient(145deg, #fff2cf 0%, #ffe4a3 100%);
+  --fill-cool: linear-gradient(145deg, #eef0fb 0%, #dfe3f6 100%);
 
-  /* Tint: every interactive element uses this, the way iOS uses blue */
-  --tint: #e9b213;
-  --tint-pressed: #d0a010;
-  --danger: #ff6b6b;
+  --ink: #1f2348;
+  --ink-2: #5b6083;
+  --ink-3: #8c91ad;
 
-  /* iOS corner radii */
-  --r-card: 12px;
-  --r-control: 10px;
-  --r-sheet: 16px;
+  --tint: #e9a70f;
+  --tint-deep: #c98a06;
+  --tint-soft: #ffeec4;
+  --cool: #5b6bd6;
+  --danger: #d6455b;
 
-  --pad: 16px;               /* iOS standard side margin */
-  --inset: 60px;             /* separator inset from the leading edge */
+  --hairline: rgba(31, 35, 72, 0.07);
+  --shadow-card: 0 1px 2px rgba(31, 35, 72, 0.04), 0 8px 24px rgba(31, 35, 72, 0.05);
+  --shadow-lift: 0 2px 6px rgba(201, 138, 6, 0.18);
 
+  --r-card: 24px;
+  --r-inner: 18px;
+  --r-control: 16px;
+
+  --pad: 20px;
   --gap-xs: 6px;
   --gap-sm: 10px;
   --gap: 16px;
   --gap-lg: 22px;
-  --gap-xl: 32px;
-  --gap-2xl: 40px;
+  --gap-xl: 30px;
 
-  --tap: 44px;               /* Apple's minimum target */
-  --cta-height: 50px;
+  --tap: 44px;
+  --cta-height: 54px;
 
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
     "Segoe UI", system-ui, sans-serif;
@@ -59,10 +57,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--label);
+  background: var(--ground);
+  color: var(--ink);
   font-family: var(--font);
-  font-size: 17px;           /* iOS body size */
+  font-size: 16px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: contain;
@@ -70,6 +68,10 @@ body {
 
 body {
   min-height: 100dvh;
+  /* One continuous surface: the wash deepens toward the bottom rather than
+     stopping at a hard seam behind the tab bar. */
+  background-image: linear-gradient(180deg, var(--ground) 0%, var(--ground-2) 100%);
+  background-attachment: fixed;
 }
 
 #app {
@@ -92,10 +94,9 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-input,
-select {
+input {
   font: inherit;
-  font-size: 17px;           /* at or above 16px, so iOS never zooms */
+  font-size: 16px;
   color: inherit;
   border: 0;
   background: none;
@@ -105,50 +106,30 @@ select {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 0 var(--pad);
+  padding: 0 var(--pad) 120px;
   max-width: 520px;
   width: 100%;
   margin: 0 auto;
 }
 
-/* Large title, the way a native screen opens. */
-.large-title {
-  margin: var(--gap-sm) 0 var(--gap-lg);
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: 0.37px;
-  line-height: 1.15;
-}
-
-/* Group header above an inset list. */
-.group-header {
-  margin: var(--gap-lg) 0 var(--gap-xs);
-  padding: 0 var(--gap);
-  color: var(--label-3);
-  font-size: 13px;
-  font-weight: 400;
-}
-
-/* Inset grouped list: the core iOS container. */
-.group {
+.card {
   background: var(--card);
   border-radius: var(--r-card);
-  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.section-label {
+  margin: var(--gap-xl) 0 var(--gap-sm);
+  color: var(--ink-3);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .footnote {
-  margin: var(--gap-xs) 0 0;
-  padding: 0 var(--gap);
-  color: var(--label-3);
+  margin: var(--gap-sm) 0 0;
+  color: var(--ink-3);
   font-size: 13px;
-  line-height: 1.35;
-}
-
-.dock {
-  position: sticky;
-  bottom: 0;
-  padding: var(--gap) 0 var(--gap);
-  background: linear-gradient(to top, var(--bg) 70%, transparent);
+  line-height: 1.4;
 }
 
 @media (prefers-reduced-motion: reduce) {
