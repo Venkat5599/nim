@@ -1,13 +1,14 @@
 <script lang="ts">
   // Float's one screen.
   //
-  // The user sets a single number: how much NIM to keep spendable. Everything
-  // above it works. Everything the protocol makes awkward -- the two-phase
-  // retire-then-remove withdrawal -- is handled here so the user never has to
-  // know the word "retire".
-  import Amount from '../components/Amount.svelte'
+  // Composition notes:
+  //   - The rule is an editable sentence, not a labelled form field. One
+  //     number, read in place, so the whole product fits in a line of English.
+  //   - The split bar carries its own labels under each segment. No legend,
+  //     no colour-key dots.
+  //   - Motion is limited to two things that report a real change: the hero
+  //     figure counting when the balance moves, and the segments resizing.
   import PrimaryButton from '../components/PrimaryButton.svelte'
-  import TextAction from '../components/TextAction.svelte'
   import ChainStatus from '../components/ChainStatus.svelte'
   import PaymentState from './PaymentState.svelte'
   import { getAddress, readBalance, isInsideNimiqPay } from '../lib/nimiq'
@@ -18,19 +19,17 @@
     addStake,
     retireStake,
     removeStake,
-    EMPTY_STAKER,
     type StakerState,
     type Plan,
   } from '../lib/staking'
   import { runTx, payment, resetPayment } from '../lib/payment'
-  import { formatNim, nimToLuna, lunaToNim } from '../lib/units'
+  import { formatNim, nimToLuna } from '../lib/units'
   import { locale } from '../lib/i18n'
 
   const MIN_MOVE_LUNA = nimToLuna(10)
   const FLOOR_KEY = 'float:floor'
 
-  // Demo figures so the screen is legible before a wallet is connected. The
-  // cold open must never be an empty shell.
+  // Example figures so the first screen is legible before a wallet connects.
   const DEMO_LIQUID = nimToLuna(1840)
   const DEMO_STAKER: StakerState = {
     totalLuna: nimToLuna(6250),
@@ -39,13 +38,11 @@
     delegation: null,
   }
 
-  let address = $state<string | null>(null)
   let liquidLuna = $state<number | null>(null)
   let staker = $state<StakerState | null>(null)
   let readFailed = $state(false)
   let validator = $state('')
   let busy = $state(false)
-
   let floorNim = $state(loadFloor())
 
   function loadFloor(): number {
@@ -65,21 +62,18 @@
     }
   }
 
-  // Live figures when a wallet is connected, demo figures otherwise.
   const liquid = $derived(liquidLuna ?? DEMO_LIQUID)
   const stk = $derived(staker ?? DEMO_STAKER)
   const isLive = $derived(liquidLuna !== null && staker !== null)
 
   const totalLuna = $derived(liquid + stk.totalLuna)
-  const floorLuna = $derived(nimToLuna(floorNim || 0))
+  const floorLuna = $derived(nimToLuna(Number(floorNim) || 0))
 
   const plan = $derived<Plan>(
     planNextMove({
       liquidLuna: liquid,
       staker: stk,
       rule: { floorLuna, validator },
-      // Conservative: without a verified read of the window, retired stake is
-      // never assumed collectable. The user is told to come back instead.
       retiredReady: false,
       minMoveLuna: MIN_MOVE_LUNA,
     }),
@@ -87,15 +81,39 @@
 
   const showState = $derived($payment.status !== 'idle')
 
-  const pct = $derived((n: number) => (totalLuna > 0 ? (n / totalLuna) * 100 : 0))
+  function pct(n: number): number {
+    return totalLuna > 0 ? (n / totalLuna) * 100 : 0
+  }
+
+  // Counts the hero figure toward its target. Motivated: after a transaction
+  // the number moves, and seeing it move is the confirmation.
+  let shown = $state(0)
+  $effect(() => {
+    const target = stk.activeLuna
+    const from = shown
+    if (from === target) return
+    const start = performance.now()
+    const dur = 520
+    let raf = 0
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / dur)
+      const eased = 1 - Math.pow(1 - t, 3)
+      shown = from + (target - from) * eased
+      if (t < 1) raf = requestAnimationFrame(step)
+    }
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      shown = target
+    } else {
+      raf = requestAnimationFrame(step)
+    }
+    return () => cancelAnimationFrame(raf)
+  })
 
   async function load() {
     const a = await getAddress()
     if (!a) return
-    address = a
     const [b, s] = await Promise.all([readBalance(a), readStaker(a)])
     if (b === null || s === null) {
-      // A failed read must never drive a rebalance. Say so and stop.
       readFailed = true
       return
     }
@@ -124,9 +142,9 @@
   function planExplain(p: Plan): string {
     switch (p.action) {
       case 'stake':
-        return `You are holding more than your ${formatNim(floorLuna, locale)} NIM floor.`
+        return 'Anything above your floor earns instead of sitting still.'
       case 'retire':
-        return 'This starts a waiting period before the NIM is spendable again.'
+        return 'Starts a waiting period before this NIM is spendable again.'
       case 'remove':
         return 'The waiting period is over. This returns it to your balance.'
       default:
@@ -135,17 +153,14 @@
   }
 
   async function execute() {
-    if (plan.action === 'none' || busy) return
-    if (!isLive) return
+    if (plan.action === 'none' || busy || !isLive) return
     busy = true
     try {
       const amount = plan.amountLuna
       await runTx(amount, () => {
         switch (plan.action) {
           case 'stake':
-            return plan.isFirstTime
-              ? startStaking(validator.trim(), amount)
-              : addStake(amount)
+            return plan.isFirstTime ? startStaking(validator.trim(), amount) : addStake(amount)
           case 'retire':
             return retireStake(amount)
           case 'remove':
@@ -176,73 +191,80 @@
   <div class="screen">
     <header><span class="brand">Float</span></header>
 
-    <section class="card">
-      <p class="cap muted">Working for you</p>
-      <Amount luna={stk.activeLuna} currency="NIM" size="hero" />
+    <section class="hero">
+      <p class="label">Earning</p>
+      <p class="figure tabular">
+        {formatNim(shown, locale)}<span class="unit">NIM</span>
+      </p>
+    </section>
 
-      <!-- Signature element: one bar, the whole balance, split by what each
-           part is doing. Not a progress bar toward a goal. -->
-      <div class="split" aria-hidden="true">
-        <span class="seg working" style="width: {pct(stk.activeLuna)}%"></span>
+    <section class="allocation">
+      <div class="bar">
+        <span class="seg working" style="flex-basis: {pct(stk.activeLuna)}%"></span>
         {#if stk.retiredLuna > 0}
-          <span class="seg waiting" style="width: {pct(stk.retiredLuna)}%"></span>
+          <span class="seg waiting" style="flex-basis: {pct(stk.retiredLuna)}%"></span>
         {/if}
-        <span class="seg liquid" style="width: {pct(liquid)}%"></span>
+        <span class="seg liquid" style="flex-basis: {pct(liquid)}%"></span>
       </div>
 
-      <div class="legend">
-        <span><i class="dot working"></i>Working {formatNim(stk.activeLuna, locale)}</span>
+      <div class="marks">
+        <span class="mark" style="flex-basis: {pct(stk.activeLuna)}%">
+          <b class="tabular">{formatNim(stk.activeLuna, locale)}</b>
+          working
+        </span>
         {#if stk.retiredLuna > 0}
-          <span><i class="dot waiting"></i>Waiting {formatNim(stk.retiredLuna, locale)}</span>
+          <span class="mark" style="flex-basis: {pct(stk.retiredLuna)}%">
+            <b class="tabular">{formatNim(stk.retiredLuna, locale)}</b>
+            waiting
+          </span>
         {/if}
-        <span><i class="dot liquid"></i>Spendable {formatNim(liquid, locale)}</span>
+        <span class="mark" style="flex-basis: {pct(liquid)}%">
+          <b class="tabular">{formatNim(liquid, locale)}</b>
+          spendable
+        </span>
       </div>
     </section>
 
-    <label class="rule">
-      <span class="cap muted">Keep spendable</span>
-      <div class="rule-input">
-        <input
-          class="tabular"
-          type="text"
-          inputmode="decimal"
-          bind:value={floorNim}
-          onchange={() => saveFloor(Number(floorNim))}
-        />
-        <span class="unit">NIM</span>
-      </div>
-    </label>
+    <!-- The entire rule, as one sentence you can edit in place. -->
+    <p class="rule">
+      Keep
+      <input
+        class="inline-field tabular"
+        type="text"
+        inputmode="decimal"
+        aria-label="NIM to keep spendable"
+        bind:value={floorNim}
+        onchange={() => saveFloor(Number(floorNim))}
+      />
+      NIM spendable. The rest works.
+    </p>
 
     {#if plan.action === 'stake' && plan.isFirstTime}
-      <label class="rule">
-        <span class="cap muted">Validator</span>
-        <div class="rule-input">
-          <input class="addr" bind:value={validator} placeholder="NQ..." spellcheck="false" />
-        </div>
-        <span class="hint muted">
-          The validator you delegate to. Your NIM never leaves your account.
-        </span>
+      <label class="validator">
+        <span class="label">Validator to delegate to</span>
+        <input class="addr" bind:value={validator} placeholder="NQ..." spellcheck="false" />
+        <span class="fine">Your NIM stays in your own account.</span>
       </label>
     {/if}
 
     <section class="next">
-      <p class="plan-title">{planLabel(plan)}</p>
-      <p class="plan-detail muted">{planExplain(plan)}</p>
+      <p class="next-title">{planLabel(plan)}</p>
+      <p class="next-detail">{planExplain(plan)}</p>
     </section>
 
     {#if readFailed}
-      <p class="warn">
+      <p class="notice danger">
         Could not read your balance from the network, so no move is suggested.
         Nothing has been changed.
       </p>
     {:else if !isLive}
-      <p class="warn demo">
-        Example figures. Connect inside Nimiq Pay to see your own balance.
+      <p class="notice">
+        Example figures. Open inside Nimiq Pay to see your own balance.
       </p>
     {/if}
 
     {#if !isInsideNimiqPay()}
-      <p class="hint muted center">Open this in Nimiq Pay to use your wallet</p>
+      <p class="fine center">This runs as a Nimiq Pay mini app.</p>
     {/if}
 
     <ChainStatus />
@@ -255,156 +277,184 @@
         disabled={plan.action === 'none' || busy || !isLive || needsValidator}
         onclick={execute}
       />
-      {#if stk.retiredLuna > 0}
-        <TextAction label="Why is some NIM waiting?" onclick={() => {}} />
-      {/if}
     </div>
   </div>
 {/if}
 
 <style>
   header {
-    padding: var(--gap-lg) 0 var(--gap);
+    padding: var(--gap-lg) 0 var(--gap-2xl);
   }
 
   .brand {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 600;
     letter-spacing: -0.01em;
   }
 
-  .card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: var(--gap-lg) var(--gap);
-  }
-
-  .cap {
-    display: block;
-    margin: 0 0 6px;
-    font-size: 13px;
-  }
-
-  .split {
-    display: flex;
-    gap: 2px;
-    height: 12px;
-    margin: var(--gap-lg) 0 var(--gap-sm);
-    background: var(--recessed);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-
-  .seg {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-
-  .seg.working,
-  .dot.working {
-    background: var(--amber);
-  }
-
-  .seg.waiting,
-  .dot.waiting {
-    background: var(--muted);
-  }
-
-  .seg.liquid,
-  .dot.liquid {
-    background: var(--muted-bright);
-    opacity: 0.45;
-  }
-
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gap);
-    font-size: 12px;
+  .label {
+    margin: 0 0 var(--gap-xs);
     color: var(--muted);
-  }
-
-  .dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 6px;
-    border-radius: 2px;
-  }
-
-  .rule {
-    display: block;
-    margin-top: var(--gap-lg);
-  }
-
-  .rule-input {
-    display: flex;
-    align-items: center;
-    gap: var(--gap-sm);
-    min-height: 56px;
-    padding: 0 var(--gap);
-    background: var(--surface);
-    border-radius: var(--radius);
-  }
-
-  .rule-input input {
-    flex: 1;
-    min-width: 0;
-    color: var(--amber);
-    font-size: 20px;
-    font-weight: 600;
-    outline: none;
-  }
-
-  .rule-input .addr {
-    color: var(--ink);
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 400;
   }
 
-  .unit {
+  /* The figure is the display typography of this app. No display typeface,
+     just scale, weight and tight tracking on the system stack. */
+  .hero .figure {
+    margin: 0;
+    color: var(--ink);
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+
+  .hero .unit {
+    margin-left: 0.3em;
     color: var(--amber);
+    font-size: 0.34em;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  .allocation {
+    margin-top: var(--gap-2xl);
+  }
+
+  .bar {
+    display: flex;
+    gap: 3px;
+    height: 10px;
+  }
+
+  .seg {
+    flex-grow: 0;
+    flex-shrink: 1;
+    min-width: 3px;
+    border-radius: 999px;
+    transition: flex-basis 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .seg.working {
+    background: var(--amber);
+  }
+
+  .seg.waiting {
+    background: var(--muted);
+  }
+
+  .seg.liquid {
+    background: var(--surface);
+  }
+
+  /* Labels sit under the segment they describe, sharing its width, so the
+     bar explains itself without a colour key. */
+  .marks {
+    display: flex;
+    gap: 3px;
+    margin-top: var(--gap-sm);
+  }
+
+  .mark {
+    flex-grow: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+    overflow: hidden;
+  }
+
+  .mark b {
+    display: block;
+    color: var(--ink);
+    font-size: 14px;
     font-weight: 600;
   }
 
-  .next {
+  .rule {
+    margin: var(--gap-2xl) 0 0;
+    color: var(--muted-bright);
+    font-size: 17px;
+    line-height: 1.7;
+  }
+
+  /* Editable in place. Sized to its content, underlined only enough to read
+     as a field. */
+  .inline-field {
+    width: 4.5ch;
+    padding: 0 2px;
+    color: var(--amber);
+    font-size: 17px;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid var(--amber);
+    outline: none;
+  }
+
+  .inline-field:focus {
+    background: var(--surface);
+  }
+
+  .validator {
+    display: block;
     margin-top: var(--gap-xl);
   }
 
-  .plan-title {
-    margin: 0 0 4px;
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-
-  .plan-detail {
-    margin: 0;
-    font-size: 14px;
-  }
-
-  .warn {
-    margin: var(--gap-lg) 0 0;
-    padding: var(--gap-sm) var(--gap);
-    background: var(--recessed);
+  .validator .addr {
+    width: 100%;
+    min-height: 52px;
+    padding: 0 var(--gap);
+    background: var(--surface);
     border-radius: var(--radius);
-    color: var(--danger);
-    font-size: 13px;
+    outline: none;
   }
 
-  .warn.demo {
-    color: var(--muted-bright);
+  .validator .addr:focus {
+    background: var(--surface-pressed);
   }
 
-  .hint {
+  .fine {
     display: block;
     margin-top: var(--gap-xs);
+    color: var(--muted);
     font-size: 13px;
   }
 
   .center {
     text-align: center;
+  }
+
+  .next {
+    margin-top: var(--gap-2xl);
+  }
+
+  .next-title {
+    margin: 0 0 4px;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+  }
+
+  .next-detail {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    max-width: 34ch;
+  }
+
+  .notice {
+    margin: var(--gap-lg) 0 0;
+    padding: var(--gap-sm) var(--gap);
+    background: var(--recessed);
+    border-radius: var(--radius);
+    color: var(--muted-bright);
+    font-size: 13px;
+  }
+
+  .notice.danger {
+    color: var(--danger);
   }
 
   .spacer {

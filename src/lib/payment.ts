@@ -2,7 +2,7 @@
 //
 // Nimiq Pay shows a NATIVE confirmation dialog for every payment. On mobile
 // that dialog backgrounds the webview. A promise-only implementation loses the
-// result and leaves the user staring at a spinner forever — which is exactly
+// result and leaves the user staring at a spinner forever - which is exactly
 // how the "payment success, failure and cancellation are handled properly"
 // criterion is lost.
 //
@@ -183,7 +183,7 @@ function classify(err: unknown): FailureReason {
  * Called when the webview comes back to the foreground.
  *
  * If we are still mid-flight when the user returns, the promise above may
- * never settle — the webview was suspended while the native dialog was up.
+ * never settle - the webview was suspended while the native dialog was up.
  * Rather than hang, resolve to a state the user can act on.
  *
  * Deliberately conservative: we never resolve to success here. Claiming a

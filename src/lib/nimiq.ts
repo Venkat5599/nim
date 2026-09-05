@@ -2,7 +2,7 @@
 //
 // IMPORTANT: the provider's wallet methods do NOT throw on failure. They
 // resolve to `{ error: { type, message } }` (ErrorResponse). Every call site
-// must narrow the union. That is what `unwrap` below exists for — getting this
+// must narrow the union. That is what `unwrap` below exists for - getting this
 // wrong means a cancelled payment silently reads as success.
 //
 // Verified against the installed @nimiq/mini-app-sdk@0.1.0 type definitions
@@ -171,7 +171,7 @@ export function decodePotTag(data: string | null | undefined): string | null {
 /**
  * Sends a contribution, tagged on chain with the pot it belongs to.
  *
- * The tag is what makes a pot's history reconstructible from Nimiq alone —
+ * The tag is what makes a pot's history reconstructible from Nimiq alone -
  * our database is a cache, not the source of truth.
  *
  * Throws NimiqCallError. Callers go through lib/payment.ts, which maps
