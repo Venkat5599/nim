@@ -16,7 +16,7 @@
 
 <style>
   .amount {
-    color: var(--amber);
+    color: var(--tint);
     font-weight: 700;
     letter-spacing: -0.02em;
     white-space: nowrap;

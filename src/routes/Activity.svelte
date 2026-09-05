@@ -26,12 +26,12 @@
 </script>
 
 <div class="screen">
-  <header><h1>Activity</h1></header>
+  <h1 class="large-title">Activity</h1>
 
   {#if entries.length}
-    <ol class="list">
-      {#each entries as e (e.txHash)}
-        <li class="row">
+    <div class="group">
+      {#each entries as e, i (e.txHash)}
+        <div class="row" class:last={i === entries.length - 1}>
           <div class="left">
             <span class="what">{describe(e.kind)}</span>
             <span class="meta tabular">{when(e.at)} / {shortHash(e.txHash)}</span>
@@ -39,17 +39,17 @@
           {#if e.amountLuna > 0}
             <span class="amt tabular">{formatNim(e.amountLuna, locale)}</span>
           {/if}
-        </li>
+        </div>
       {/each}
-    </ol>
-    <p class="fine">
+    </div>
+    <p class="footnote">
       Built from transactions submitted through Float on this device. Each one
       is a real transaction hash you can verify on chain.
     </p>
   {:else if loaded}
     <div class="empty">
       <p class="empty-title">Nothing yet</p>
-      <p class="fine">
+      <p class="footnote center">
         When you put NIM to work or free some up, it shows here with its
         transaction hash.
       </p>
@@ -64,29 +64,24 @@
 </div>
 
 <style>
-  header {
-    padding: var(--gap-lg) 0 var(--gap-lg);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 28px;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-  }
-
-  .list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
   .row {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--gap);
-    padding: var(--gap-sm) 0;
+    min-height: var(--tap);
+    padding: 11px var(--gap);
+  }
+
+  .row:not(.last)::after {
+    content: "";
+    position: absolute;
+    left: var(--gap);
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--separator);
   }
 
   .left {
@@ -97,36 +92,35 @@
   }
 
   .what {
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 17px;
   }
 
   .meta {
-    color: var(--muted);
-    font-size: 12px;
+    color: var(--label-3);
+    font-size: 13px;
   }
 
   .amt {
-    color: var(--amber);
+    color: var(--label-2);
     font-size: 17px;
-    font-weight: 600;
   }
 
   .empty {
     margin-top: var(--gap-2xl);
+    text-align: center;
   }
 
   .empty-title {
     margin: 0 0 var(--gap-xs);
-    font-size: 19px;
+    font-size: 20px;
     font-weight: 600;
   }
 
-  .fine {
-    margin: var(--gap-lg) 0 0;
-    color: var(--muted);
-    font-size: 13px;
-    max-width: 40ch;
+  .center {
+    text-align: center;
+    max-width: 34ch;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .spacer {

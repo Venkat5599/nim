@@ -11,9 +11,9 @@
     display: block;
     background: linear-gradient(
       90deg,
-      var(--surface) 0%,
-      var(--surface-pressed) 50%,
-      var(--surface) 100%
+      var(--card) 0%,
+      var(--card-pressed) 50%,
+      var(--card) 100%
     );
     background-size: 200% 100%;
     animation: sweep 1400ms ease-in-out infinite;

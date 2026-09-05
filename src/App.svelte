@@ -54,16 +54,14 @@
   {/key}
 </main>
 
-<div class="tabdock">
-  <TabBar />
-</div>
+<TabBar />
 
 <style>
   .app {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding-bottom: 84px; /* clears the tab dock */
+    padding-bottom: 96px; /* clears the tab dock */
   }
 
   .page {
@@ -80,14 +78,6 @@
     to   { transform: none; }
   }
 
-  .tabdock {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 0 var(--pad) calc(10px + env(safe-area-inset-bottom));
-    background: linear-gradient(to top, var(--canvas) 72%, transparent);
-  }
 
   @media (prefers-reduced-motion: reduce) {
     .page { animation: none; }

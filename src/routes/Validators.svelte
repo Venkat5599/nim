@@ -3,6 +3,7 @@
   // existing stake to a different validator without unstaking first.
   import PrimaryButton from '../components/PrimaryButton.svelte'
   import PaymentState from './PaymentState.svelte'
+  import Row from '../components/Row.svelte'
   import { readValidators, rememberValidator, addActivity } from '../lib/activity'
   import { switchValidator, readStaker } from '../lib/staking'
   import { getAddress, shortAddressSafe } from '../lib/nimiq'
@@ -53,31 +54,41 @@
   <PaymentState onRetry={() => {}} onDone={() => resetPayment()} />
 {:else}
   <div class="screen">
-    <header><h1>Validator</h1></header>
+    <h1 class="large-title">Validator</h1>
 
-    <section class="current">
-      <p class="label">Currently delegating to</p>
-      <p class="value">{current ? shortAddressSafe(current) : 'Not delegating yet'}</p>
-    </section>
+    <div class="group">
+      <Row
+        label="Delegating to"
+        value={current ? shortAddressSafe(current) : 'Not yet'}
+        last
+      />
+    </div>
 
-    <label class="field">
-      <span class="label">Move delegation to</span>
-      <input class="addr" bind:value={input} placeholder="NQ..." spellcheck="false" />
-      <span class="fine">
-        Your stake keeps earning through the switch. Nothing is unstaked and
-        nothing leaves your account.
-      </span>
-    </label>
+    <p class="group-header">Move delegation</p>
+    <div class="group">
+      <Row label="New validator" last>
+        {#snippet children()}
+          <input class="addr" bind:value={input} placeholder="NQ..." spellcheck="false" />
+        {/snippet}
+      </Row>
+    </div>
+    <p class="footnote">
+      Your stake keeps earning through the switch. Nothing is unstaked and
+      nothing leaves your account.
+    </p>
 
     {#if recent.length}
-      <section class="recent">
-        <p class="label">Used before</p>
-        {#each recent as v}
-          <button class="recent-row" onclick={() => (input = v)}>
-            {shortAddressSafe(v)}
-          </button>
+      <p class="group-header">Used before</p>
+      <div class="group">
+        {#each recent as v, i}
+          <Row
+            label={shortAddressSafe(v)}
+            chevron
+            last={i === recent.length - 1}
+            onclick={() => (input = v)}
+          />
         {/each}
-      </section>
+      </div>
     {/if}
 
     <div class="spacer"></div>
@@ -93,74 +104,13 @@
 {/if}
 
 <style>
-  header {
-    padding: var(--gap-lg) 0 var(--gap-lg);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 28px;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-  }
-
-  .label {
-    display: block;
-    margin: 0 0 var(--gap-xs);
-    color: var(--muted);
-    font-size: 13px;
-  }
-
-  .current .value {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-  }
-
-  .field {
-    display: block;
-    margin-top: var(--gap-xl);
-  }
-
   .addr {
     width: 100%;
-    min-height: 52px;
-    padding: 0 var(--gap);
-    background: var(--surface);
-    border-radius: var(--radius);
+    min-width: 0;
+    color: var(--tint);
+    font-size: 17px;
+    text-align: right;
     outline: none;
-  }
-
-  .addr:focus {
-    background: var(--surface-pressed);
-  }
-
-  .fine {
-    display: block;
-    margin-top: var(--gap-xs);
-    color: var(--muted);
-    font-size: 13px;
-    max-width: 40ch;
-  }
-
-  .recent {
-    margin-top: var(--gap-xl);
-  }
-
-  .recent-row {
-    display: block;
-    width: 100%;
-    min-height: var(--tap);
-    padding: 0 var(--gap);
-    margin-bottom: var(--gap-xs);
-    background: var(--surface);
-    border-radius: var(--radius);
-    text-align: left;
-    font-size: 15px;
-  }
-
-  .recent-row:active {
-    background: var(--surface-pressed);
   }
 
   .spacer {

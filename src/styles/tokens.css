@@ -1,38 +1,52 @@
-/* Canonical design tokens. Source of truth is ARCHITECTURE.md section 11,
-   which reconciles the two conflicting palettes in the Stitch DESIGN.md.
-   The prose palette wins: it matches Nimiq brand navy and gold. */
+/* iOS-flavoured token set, rendered on the web.
+   Structure follows Apple's dark grouped-content model: a recessed page
+   background with elevated content groups sitting on it, separated by
+   hairlines rather than borders. Brand navy replaces Apple's neutral greys
+   and amber replaces the system blue tint. */
 
 :root {
   color-scheme: dark;
 
-  --canvas: #1f2348;
-  --surface: #282c55;
-  --surface-pressed: #252a50;
-  --recessed: #171a37;
+  /* Backgrounds */
+  --bg: #14162f;              /* grouped page background, recessed */
+  --card: #1f2348;            /* elevated content group */
+  --card-pressed: #262a55;
+  --well: #101228;            /* insets inside a card */
 
-  --amber: #e9b213;
-  --amber-pressed: #d0a010;
-  --ink: #ffffff;
-  --muted: #8e92b2;
-  --muted-bright: #a0a5c5;
-  --danger: #e05252;
+  /* Materials */
+  --chrome: rgba(20, 22, 47, 0.72);
+  --separator: rgba(255, 255, 255, 0.08);
 
-  --radius: 12px;
-  --radius-sheet: 20px;
+  /* Content */
+  --label: #ffffff;
+  --label-2: #a0a5c5;
+  --label-3: #8e92b2;
 
-  --pad: 20px;
-  --gap-xs: 8px;
-  --gap-sm: 12px;
+  /* Tint: every interactive element uses this, the way iOS uses blue */
+  --tint: #e9b213;
+  --tint-pressed: #d0a010;
+  --danger: #ff6b6b;
+
+  /* iOS corner radii */
+  --r-card: 12px;
+  --r-control: 10px;
+  --r-sheet: 16px;
+
+  --pad: 16px;               /* iOS standard side margin */
+  --inset: 60px;             /* separator inset from the leading edge */
+
+  --gap-xs: 6px;
+  --gap-sm: 10px;
   --gap: 16px;
-  --gap-lg: 24px;
+  --gap-lg: 22px;
   --gap-xl: 32px;
   --gap-2xl: 40px;
 
-  --tap: 44px;
-  --cta-height: 52px;
+  --tap: 44px;               /* Apple's minimum target */
+  --cta-height: 50px;
 
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
-    system-ui, sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", system-ui, sans-serif;
 }
 
 *,
@@ -45,13 +59,13 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--canvas);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--label);
   font-family: var(--font);
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: 17px;           /* iOS body size */
+  line-height: 1.4;
   -webkit-font-smoothing: antialiased;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
 }
 
 body {
@@ -64,8 +78,6 @@ body {
   flex-direction: column;
 }
 
-/* Every amount in the app. Tabular figures stop the layout jittering when a
-   live pot updates. */
 .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
@@ -83,33 +95,61 @@ button {
 input,
 select {
   font: inherit;
-  font-size: 16px; /* below 16px iOS zooms the viewport on focus */
+  font-size: 17px;           /* at or above 16px, so iOS never zooms */
   color: inherit;
   border: 0;
   background: none;
 }
-
-a { color: var(--muted-bright); }
 
 .screen {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 0 var(--pad);
-  max-width: 480px;
+  max-width: 520px;
   width: 100%;
   margin: 0 auto;
 }
 
-/* Primary actions sit above the home indicator, never against it. */
+/* Large title, the way a native screen opens. */
+.large-title {
+  margin: var(--gap-sm) 0 var(--gap-lg);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.37px;
+  line-height: 1.15;
+}
+
+/* Group header above an inset list. */
+.group-header {
+  margin: var(--gap-lg) 0 var(--gap-xs);
+  padding: 0 var(--gap);
+  color: var(--label-3);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* Inset grouped list: the core iOS container. */
+.group {
+  background: var(--card);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.footnote {
+  margin: var(--gap-xs) 0 0;
+  padding: 0 var(--gap);
+  color: var(--label-3);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .dock {
   position: sticky;
   bottom: 0;
-  padding: var(--gap) 0 calc(var(--gap) + env(safe-area-inset-bottom));
-  background: linear-gradient(to top, var(--canvas) 70%, transparent);
+  padding: var(--gap) 0 var(--gap);
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
 }
-
-.muted { color: var(--muted); }
 
 @media (prefers-reduced-motion: reduce) {
   * {

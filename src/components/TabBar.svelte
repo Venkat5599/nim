@@ -1,78 +1,76 @@
 <script lang="ts">
-  // Real navigation with a sliding indicator tied to the active tab.
-  // The indicator is the active state: no dot tacked under the label.
+  // iOS tab bar: translucent material, hairline top edge, icon above a small
+  // label, tint colour marking the selected tab. No sliding pill, no dot.
+  import { ChartPieSlice, ClockCounterClockwise, ShieldCheck } from 'phosphor-svelte'
   import { route, navigate } from '../lib/router'
 
   const TABS = [
-    { name: 'float', path: '/', label: 'Balance' },
-    { name: 'activity', path: '/activity', label: 'Activity' },
-    { name: 'validators', path: '/validators', label: 'Validator' },
+    { name: 'float', path: '/', label: 'Balance', icon: ChartPieSlice },
+    { name: 'activity', path: '/activity', label: 'Activity', icon: ClockCounterClockwise },
+    { name: 'validators', path: '/validators', label: 'Validator', icon: ShieldCheck },
   ] as const
 
   const r = $derived($route)
-  const index = $derived(
-    Math.max(
-      0,
-      TABS.findIndex((t) => t.name === r.name || (t.name === 'float' && r.name === 'home')),
-    ),
-  )
+  const isActive = (n: string) => n === r.name || (n === 'float' && r.name === 'home')
 </script>
 
-<nav class="tabs" style="--i: {index}; --n: {TABS.length}">
-  <span class="indicator" aria-hidden="true"></span>
+<nav class="tabbar">
   {#each TABS as tab}
-    <button
-      class="tab"
-      class:active={tab.name === r.name || (tab.name === 'float' && r.name === 'home')}
-      onclick={() => navigate(tab.path)}
-    >
-      {tab.label}
+    {@const active = isActive(tab.name)}
+    <button class="tab" class:active onclick={() => navigate(tab.path)}>
+      <tab.icon
+        size={25}
+        weight={active ? 'fill' : 'regular'}
+        color={active ? 'var(--tint)' : 'var(--label-3)'}
+      />
+      <span>{tab.label}</span>
     </button>
   {/each}
 </nav>
 
 <style>
-  .tabs {
-    position: relative;
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
     display: grid;
-    grid-template-columns: repeat(var(--n), 1fr);
-    max-width: 480px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 6px;
-    background: var(--surface);
-    border-radius: var(--radius);
+    grid-template-columns: repeat(3, 1fr);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--chrome);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    box-shadow: inset 0 1px 0 var(--separator);
   }
 
-  .indicator {
-    position: absolute;
-    top: 6px;
-    bottom: 6px;
-    left: 6px;
-    width: calc((100% - 12px) / var(--n));
-    background: var(--recessed);
-    border-radius: 8px;
-    transform: translateX(calc(var(--i) * 100%));
-    transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Where blur is unavailable the bar must still be opaque, never a
+     see-through smear over scrolling content. */
+  @supports not (backdrop-filter: blur(20px)) {
+    .tabbar {
+      background: var(--bg);
+    }
   }
 
   .tab {
-    position: relative;
-    z-index: 1;
-    min-height: 40px;
-    color: var(--muted);
-    font-size: 14px;
-    transition: color 200ms ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 49px;
+    padding: 7px 0 6px;
+    color: var(--label-3);
+    font-size: 10px;
+    letter-spacing: 0.06px;
   }
 
   .tab.active {
-    color: var(--ink);
-    font-weight: 600;
+    color: var(--tint);
+    font-weight: 500;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .indicator {
-      transition: none;
-    }
+  .tab:active {
+    opacity: 0.55;
   }
 </style>

@@ -1,6 +1,5 @@
 <script lang="ts">
-  // Secondary actions are plain text. No outlined "ghost" button next to the
-  // filled one -- that pairing is the stock template.
+  // Plain tinted text action, the iOS secondary.
   let {
     label = '',
     onclick = () => {},
@@ -14,12 +13,12 @@
     display: block;
     width: 100%;
     min-height: var(--tap);
-    color: var(--muted-bright);
-    font-size: 16px;
+    color: var(--tint);
+    font-size: 17px;
     text-align: center;
   }
 
   .text-action:active {
-    color: var(--ink);
+    opacity: 0.55;
   }
 </style>

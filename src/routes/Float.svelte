@@ -1,14 +1,9 @@
 <script lang="ts">
-  // Float's one screen.
-  //
-  // Composition notes:
-  //   - The rule is an editable sentence, not a labelled form field. One
-  //     number, read in place, so the whole product fits in a line of English.
-  //   - The split bar carries its own labels under each segment. No legend,
-  //     no colour-key dots.
-  //   - Motion is limited to two things that report a real change: the hero
-  //     figure counting when the balance moves, and the segments resizing.
+  // Balance screen, built on iOS conventions: large title, a hero figure,
+  // then inset grouped lists. Every interactive value is tinted; every
+  // static value is secondary grey.
   import PrimaryButton from '../components/PrimaryButton.svelte'
+  import Row from '../components/Row.svelte'
   import ChainStatus from '../components/ChainStatus.svelte'
   import PaymentState from './PaymentState.svelte'
   import { getAddress, readBalance, isInsideNimiqPay } from '../lib/nimiq'
@@ -30,7 +25,6 @@
   const MIN_MOVE_LUNA = nimToLuna(10)
   const FLOOR_KEY = 'float:floor'
 
-  // Example figures so the first screen is legible before a wallet connects.
   const DEMO_LIQUID = nimToLuna(1840)
   const DEMO_STAKER: StakerState = {
     totalLuna: nimToLuna(6250),
@@ -66,7 +60,6 @@
   const liquid = $derived(liquidLuna ?? DEMO_LIQUID)
   const stk = $derived(staker ?? DEMO_STAKER)
   const isLive = $derived(liquidLuna !== null && staker !== null)
-
   const totalLuna = $derived(liquid + stk.totalLuna)
   const floorLuna = $derived(nimToLuna(Number(floorNim) || 0))
 
@@ -86,27 +79,25 @@
     return totalLuna > 0 ? (n / totalLuna) * 100 : 0
   }
 
-  // Counts the hero figure toward its target. Motivated: after a transaction
-  // the number moves, and seeing it move is the confirmation.
+  // The figure counts to its target after a transaction, because the number
+  // moving is the confirmation that something happened.
   let shown = $state(0)
   $effect(() => {
     const target = stk.activeLuna
     const from = shown
     if (from === target) return
-    const start = performance.now()
-    const dur = 520
-    let raf = 0
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / dur)
-      const eased = 1 - Math.pow(1 - t, 3)
-      shown = from + (target - from) * eased
-      if (t < 1) raf = requestAnimationFrame(step)
-    }
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       shown = target
-    } else {
-      raf = requestAnimationFrame(step)
+      return
     }
+    const start = performance.now()
+    let raf = 0
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / 520)
+      shown = from + (target - from) * (1 - Math.pow(1 - t, 3))
+      if (t < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
     return () => cancelAnimationFrame(raf)
   })
 
@@ -177,8 +168,6 @@
           default:
             throw new Error('no action')
         }
-        // Logged only after a hash comes back, so the list never contains a
-        // transaction that was cancelled or never broadcast.
         addActivity({ txHash: hash, kind, amountLuna: amount, at: Date.now() })
         return hash
       })
@@ -202,82 +191,80 @@
   />
 {:else}
   <div class="screen">
-    <header><span class="brand">Float</span></header>
+    <h1 class="large-title">Balance</h1>
 
     <section class="hero">
-      <p class="label">Earning</p>
+      <p class="hero-cap">Earning</p>
       <p class="figure tabular">
         {formatNim(shown, locale)}<span class="unit">NIM</span>
       </p>
-    </section>
 
-    <section class="allocation">
-      <div class="bar">
+      <div class="bar" aria-hidden="true">
         <span class="seg working" style="flex-basis: {pct(stk.activeLuna)}%"></span>
         {#if stk.retiredLuna > 0}
           <span class="seg waiting" style="flex-basis: {pct(stk.retiredLuna)}%"></span>
         {/if}
         <span class="seg liquid" style="flex-basis: {pct(liquid)}%"></span>
       </div>
-
-      <div class="marks">
-        <span class="mark" style="flex-basis: {pct(stk.activeLuna)}%">
-          <b class="tabular">{formatNim(stk.activeLuna, locale)}</b>
-          working
-        </span>
-        {#if stk.retiredLuna > 0}
-          <span class="mark" style="flex-basis: {pct(stk.retiredLuna)}%">
-            <b class="tabular">{formatNim(stk.retiredLuna, locale)}</b>
-            waiting
-          </span>
-        {/if}
-        <span class="mark" style="flex-basis: {pct(liquid)}%">
-          <b class="tabular">{formatNim(liquid, locale)}</b>
-          spendable
-        </span>
-      </div>
     </section>
 
-    <!-- The entire rule, as one sentence you can edit in place. -->
-    <p class="rule">
-      Keep
-      <input
-        class="inline-field tabular"
-        type="text"
-        inputmode="decimal"
-        aria-label="NIM to keep spendable"
-        bind:value={floorNim}
-        onchange={() => saveFloor(Number(floorNim))}
-      />
-      NIM spendable. The rest works.
-    </p>
+    <div class="group">
+      <Row label="Working" value="{formatNim(stk.activeLuna, locale)} NIM" />
+      {#if stk.retiredLuna > 0}
+        <Row label="Waiting" value="{formatNim(stk.retiredLuna, locale)} NIM" />
+      {/if}
+      <Row label="Spendable" value="{formatNim(liquid, locale)} NIM" last />
+    </div>
+
+    <p class="group-header">Your rule</p>
+    <div class="group">
+      <Row label="Keep spendable" last>
+        {#snippet children()}
+          <span class="field-wrap">
+            <input
+              class="field tabular"
+              type="text"
+              inputmode="decimal"
+              aria-label="NIM to keep spendable"
+              bind:value={floorNim}
+              onchange={() => saveFloor(Number(floorNim))}
+            />
+            <span class="field-unit">NIM</span>
+          </span>
+        {/snippet}
+      </Row>
+    </div>
+    <p class="footnote">Anything above this works. Everything below stays ready to spend.</p>
 
     {#if plan.action === 'stake' && plan.isFirstTime}
-      <label class="validator">
-        <span class="label">Validator to delegate to</span>
-        <input class="addr" bind:value={validator} placeholder="NQ..." spellcheck="false" />
-        <span class="fine">Your NIM stays in your own account.</span>
-      </label>
+      <p class="group-header">Validator</p>
+      <div class="group">
+        <Row label="Delegate to" last>
+          {#snippet children()}
+            <input class="addr" bind:value={validator} placeholder="NQ..." spellcheck="false" />
+          {/snippet}
+        </Row>
+      </div>
+      <p class="footnote">Your NIM stays in your own account.</p>
     {/if}
 
-    <section class="next">
-      <p class="next-title">{planLabel(plan)}</p>
-      <p class="next-detail">{planExplain(plan)}</p>
-    </section>
+    <p class="group-header">Next</p>
+    <div class="group">
+      <Row label={planLabel(plan)} tint={plan.action !== 'none'} last />
+    </div>
+    <p class="footnote">{planExplain(plan)}</p>
 
     {#if readFailed}
-      <p class="notice danger">
+      <p class="footnote danger">
         Could not read your balance from the network, so no move is suggested.
         Nothing has been changed.
       </p>
     {:else if !isLive}
-      <p class="notice">
-        Example figures. Open inside Nimiq Pay to see your own balance.
-      </p>
+      <p class="footnote">Example figures. Open inside Nimiq Pay to see your own balance.</p>
     {/if}
 
     {#if !isInsideNimiqPay()}
-      <p class="fine center">This runs as a Nimiq Pay mini app.</p>
+      <p class="footnote">This runs as a Nimiq Pay mini app.</p>
     {/if}
 
     <ChainStatus />
@@ -295,50 +282,37 @@
 {/if}
 
 <style>
-  header {
-    padding: var(--gap-lg) 0 var(--gap-2xl);
+  .hero {
+    padding: 0 var(--gap) var(--gap-lg);
   }
 
-  .brand {
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-
-  .label {
+  .hero-cap {
     margin: 0 0 var(--gap-xs);
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 400;
+    color: var(--label-3);
+    font-size: 15px;
   }
 
-  /* The figure is the display typography of this app. No display typeface,
-     just scale, weight and tight tracking on the system stack. */
-  .hero .figure {
+  .figure {
     margin: 0;
-    color: var(--ink);
-    font-size: 56px;
+    font-size: 44px;
     font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.035em;
+    line-height: 1.05;
+    letter-spacing: -0.5px;
   }
 
-  .hero .unit {
-    margin-left: 0.3em;
-    color: var(--amber);
-    font-size: 0.34em;
+  .unit {
+    margin-left: 0.28em;
+    color: var(--tint);
+    font-size: 0.4em;
     font-weight: 600;
     letter-spacing: 0;
-  }
-
-  .allocation {
-    margin-top: var(--gap-2xl);
   }
 
   .bar {
     display: flex;
     gap: 3px;
-    height: 10px;
+    height: 8px;
+    margin-top: var(--gap-lg);
   }
 
   .seg {
@@ -349,124 +323,40 @@
     transition: flex-basis 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  .seg.working {
-    background: var(--amber);
-  }
+  .seg.working { background: var(--tint); }
+  .seg.waiting { background: var(--label-3); }
+  .seg.liquid  { background: var(--well); }
 
-  .seg.waiting {
-    background: var(--muted);
-  }
-
-  .seg.liquid {
-    background: var(--surface);
-  }
-
-  /* Labels sit under the segment they describe, sharing its width, so the
-     bar explains itself without a colour key. */
-  .marks {
+  .field-wrap {
     display: flex;
-    gap: 3px;
-    margin-top: var(--gap-sm);
+    align-items: baseline;
+    gap: 5px;
   }
 
-  .mark {
-    flex-grow: 0;
-    flex-shrink: 1;
-    min-width: 0;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.35;
-    overflow: hidden;
-  }
-
-  .mark b {
-    display: block;
-    color: var(--ink);
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .rule {
-    margin: var(--gap-2xl) 0 0;
-    color: var(--muted-bright);
-    font-size: 17px;
-    line-height: 1.7;
-  }
-
-  /* Editable in place. Sized to its content, underlined only enough to read
-     as a field. */
-  .inline-field {
-    width: 4.5ch;
-    padding: 0 2px;
-    color: var(--amber);
+  .field {
+    width: 5ch;
+    color: var(--tint);
     font-size: 17px;
     font-weight: 600;
-    text-align: center;
-    border-bottom: 1px solid var(--amber);
+    text-align: right;
     outline: none;
   }
 
-  .inline-field:focus {
-    background: var(--surface);
+  .field-unit {
+    color: var(--label-3);
+    font-size: 15px;
   }
 
-  .validator {
-    display: block;
-    margin-top: var(--gap-xl);
-  }
-
-  .validator .addr {
+  .addr {
     width: 100%;
-    min-height: 52px;
-    padding: 0 var(--gap);
-    background: var(--surface);
-    border-radius: var(--radius);
+    min-width: 0;
+    color: var(--tint);
+    font-size: 17px;
+    text-align: right;
     outline: none;
   }
 
-  .validator .addr:focus {
-    background: var(--surface-pressed);
-  }
-
-  .fine {
-    display: block;
-    margin-top: var(--gap-xs);
-    color: var(--muted);
-    font-size: 13px;
-  }
-
-  .center {
-    text-align: center;
-  }
-
-  .next {
-    margin-top: var(--gap-2xl);
-  }
-
-  .next-title {
-    margin: 0 0 4px;
-    font-size: 19px;
-    font-weight: 600;
-    letter-spacing: -0.012em;
-  }
-
-  .next-detail {
-    margin: 0;
-    color: var(--muted);
-    font-size: 14px;
-    max-width: 34ch;
-  }
-
-  .notice {
-    margin: var(--gap-lg) 0 0;
-    padding: var(--gap-sm) var(--gap);
-    background: var(--recessed);
-    border-radius: var(--radius);
-    color: var(--muted-bright);
-    font-size: 13px;
-  }
-
-  .notice.danger {
+  .footnote.danger {
     color: var(--danger);
   }
 
