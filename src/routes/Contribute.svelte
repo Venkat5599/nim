@@ -3,7 +3,7 @@
   import PaymentState from './PaymentState.svelte'
   import { getPot, type Pot } from '../lib/db'
   import { nimToLuna, formatNim } from '../lib/units'
-  import { getAddress, isInsideNimiqPay } from '../lib/nimiq'
+  import { getAddress, isInsideNimiqPay, isPlaceholderAddress } from '../lib/nimiq'
   import { contribute, payment, resetPayment } from '../lib/payment'
   import { navigate } from '../lib/router'
   import { t, locale } from '../lib/i18n'
@@ -18,6 +18,10 @@
   const amount = $derived(Number.parseFloat(raw))
   const valid = $derived(Number.isFinite(amount) && amount > 0)
   const showState = $derived($payment.status !== 'idle')
+
+  // The seeded demo pot points at an all-zero address. Approving a payment to
+  // it destroys real NIM, so say so before the native dialog can open.
+  const isDemoTarget = $derived(!!pot && isPlaceholderAddress(pot.beneficiary))
 
   $effect(() => {
     getPot(potId).then((p) => (pot = p)).catch(() => {})
@@ -88,7 +92,15 @@
       {/each}
     </div>
 
-    <p class="note muted">{t('directNote')}</p>
+    {#if isDemoTarget}
+      <p class="warn">
+        Demo pot. This address cannot receive funds and anything you approve is
+        destroyed. Tap send, then dismiss the Nimiq Pay dialog to test the
+        cancel flow. Do not approve.
+      </p>
+    {:else}
+      <p class="note muted">{t('directNote')}</p>
+    {/if}
 
     {#if error}
       <p class="error">{error}</p>
@@ -188,6 +200,16 @@
 
   .note {
     margin: var(--gap-lg) 0 0;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .warn {
+    margin: var(--gap-lg) 0 0;
+    padding: var(--gap-sm) var(--gap);
+    background: var(--recessed);
+    border-radius: var(--radius);
+    color: var(--danger);
     font-size: 13px;
     text-align: center;
   }

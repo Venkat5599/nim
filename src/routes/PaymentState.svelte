@@ -8,6 +8,7 @@
   import PrimaryButton from '../components/PrimaryButton.svelte'
   import TextAction from '../components/TextAction.svelte'
   import { payment, resetPayment, type PaymentState } from '../lib/payment'
+  import { shortHash } from '../lib/nimiq'
   import { t } from '../lib/i18n'
 
   let {
@@ -82,6 +83,11 @@
     {/if}
 
     <p class="muted detail">{detail(s)}</p>
+
+    {#if s.status === 'success'}
+      <!-- Proof the contribution exists on chain, not just in our index. -->
+      <p class="txhash muted tabular">{shortHash(s.txHash)}</p>
+    {/if}
   </div>
 
   <div class="dock">
@@ -132,6 +138,12 @@
 
   .hero-amount {
     margin: var(--gap-xs) 0;
+  }
+
+  .txhash {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.7;
   }
 
   .detail {

@@ -137,6 +137,21 @@ export async function signMessage(message: string) {
   }
 }
 
+/**
+ * True for the all-zero placeholder addresses shipped in schema.sql and the
+ * demo pot. Sending to one of these burns real NIM into an unspendable
+ * address, so the UI must warn loudly before the native dialog opens.
+ */
+export function isPlaceholderAddress(address: string): boolean {
+  const digits = address.replace(/[^0-9A-Za-z]/g, '').toUpperCase()
+  return /^NQ\d{2}0+$/.test(digits)
+}
+
+/** Short form of a transaction hash for display. */
+export function shortHash(hash: string): string {
+  return hash.length <= 16 ? hash : `${hash.slice(0, 8)}...${hash.slice(-6)}`
+}
+
 // ------------------------------------------------------------ contributions
 
 /** Prefix that marks a transaction as a Chip In contribution on chain. */

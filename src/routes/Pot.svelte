@@ -9,6 +9,7 @@
   import PrimaryButton from '../components/PrimaryButton.svelte'
   import TextAction from '../components/TextAction.svelte'
   import ContributionRow from '../components/ContributionRow.svelte'
+  import ChainStatus from '../components/ChainStatus.svelte'
   import { getPot, getContributions, type Pot, type Contribution } from '../lib/db'
   import { formatNim, lunaToNim } from '../lib/units'
   import { navigate, potLink } from '../lib/router'
@@ -101,6 +102,8 @@
   {:else if loaded}
     <p class="muted empty">This pot could not be found.</p>
   {/if}
+
+  <ChainStatus />
 
   <div class="spacer"></div>
 
