@@ -9,7 +9,7 @@
   import PrimaryButton from '../components/PrimaryButton.svelte'
   import TextAction from '../components/TextAction.svelte'
   import ContributionRow from '../components/ContributionRow.svelte'
-  import { getPot, getContributions, db, type Pot, type Contribution } from '../lib/db'
+  import { getPot, getContributions, type Pot, type Contribution } from '../lib/db'
   import { formatNim, lunaToNim } from '../lib/units'
   import { navigate, potLink } from '../lib/router'
   import { t, locale } from '../lib/i18n'
@@ -38,21 +38,10 @@
   $effect(() => {
     load()
 
-    // Live updates: a judge watching the screen sees it move.
-    const channel = db
-      .channel(`pot:${potId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'contributions', filter: `pot_id=eq.${potId}` },
-        (payload) => {
-          contributions = [payload.new as Contribution, ...contributions]
-        },
-      )
-      .subscribe()
-
-    return () => {
-      db.removeChannel(channel)
-    }
+    // Poll rather than hold a websocket open: a judge watching the screen
+    // still sees it move, and the cold open stays small.
+    const id = setInterval(load, 8000)
+    return () => clearInterval(id)
   })
 
   async function share() {
