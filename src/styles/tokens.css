@@ -1,0 +1,119 @@
+/* Canonical design tokens. Source of truth is ARCHITECTURE.md section 11,
+   which reconciles the two conflicting palettes in the Stitch DESIGN.md.
+   The prose palette wins: it matches Nimiq brand navy and gold. */
+
+:root {
+  color-scheme: dark;
+
+  --canvas: #1f2348;
+  --surface: #282c55;
+  --surface-pressed: #252a50;
+  --recessed: #171a37;
+
+  --amber: #e9b213;
+  --amber-pressed: #d0a010;
+  --ink: #ffffff;
+  --muted: #8e92b2;
+  --muted-bright: #a0a5c5;
+  --danger: #e05252;
+
+  --radius: 12px;
+  --radius-sheet: 20px;
+
+  --pad: 20px;
+  --gap-xs: 8px;
+  --gap-sm: 12px;
+  --gap: 16px;
+  --gap-lg: 24px;
+  --gap-xl: 32px;
+  --gap-2xl: 40px;
+
+  --tap: 44px;
+  --cta-height: 52px;
+
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: contain;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+#app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Every amount in the app. Tabular figures stop the layout jittering when a
+   live pot updates. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select {
+  font: inherit;
+  font-size: 16px; /* below 16px iOS zooms the viewport on focus */
+  color: inherit;
+  border: 0;
+  background: none;
+}
+
+a { color: var(--muted-bright); }
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--pad);
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Primary actions sit above the home indicator, never against it. */
+.dock {
+  position: sticky;
+  bottom: 0;
+  padding: var(--gap) 0 calc(var(--gap) + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--canvas) 70%, transparent);
+}
+
+.muted { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
