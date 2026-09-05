@@ -2,6 +2,7 @@ import { writable } from 'svelte/store'
 
 export type Route =
   | { name: 'home' }
+  | { name: 'float' }
   | { name: 'pot'; potId: string }
   | { name: 'contribute'; potId: string }
   | { name: 'new' }
@@ -16,6 +17,7 @@ function parse(pathname: string): Route {
       ? { name: 'contribute', potId: parts[1] }
       : { name: 'pot', potId: parts[1] }
   }
+  if (parts[0] === 'float') return { name: 'float' }
   if (parts[0] === 'new') return { name: 'new' }
   if (parts[0] === 'mine') return { name: 'mine' }
   return { name: 'home' }

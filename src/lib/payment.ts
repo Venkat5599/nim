@@ -137,6 +137,38 @@ export async function contribute(args: ContributeArgs): Promise<void> {
   state.set({ status: 'success', amountLuna: args.amountLuna, txHash })
 }
 
+/**
+ * Runs any wallet transaction through the same state machine the contribution
+ * flow uses, so staking inherits the cancel handling and the visibilitychange
+ * reconciliation for free.
+ */
+export async function runTx(
+  amountLuna: number,
+  send: () => Promise<string>,
+): Promise<void> {
+  const current = get(state)
+  if (current.status === 'submitting' || current.status === 'pending') return
+
+  state.set({ status: 'submitting', amountLuna })
+
+  let txHash: string
+  try {
+    txHash = await send()
+  } catch (err) {
+    if (isUserRejection(err)) {
+      state.set({ status: 'cancelled' })
+      return
+    }
+    state.set({
+      status: 'failed',
+      reason: isInvalidTransaction(err) ? 'invalid' : classify(err),
+    })
+    return
+  }
+
+  state.set({ status: 'success', amountLuna, txHash })
+}
+
 function classify(err: unknown): FailureReason {
   const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase()
   if (msg.includes('network') || msg.includes('fetch') || msg.includes('timeout')) {

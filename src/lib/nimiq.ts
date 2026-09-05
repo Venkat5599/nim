@@ -216,6 +216,34 @@ export async function stake(args: {
   return unwrap(result)
 }
 
+/**
+ * Spendable balance in Luna, or null when the read fails.
+ *
+ * Like readStaker, there is no typed provider method for this, so it goes
+ * through the generic RPC passthrough. Null means unknown, never zero -- the
+ * UI must not compute a rebalance from a failed read.
+ */
+export async function readBalance(address: string): Promise<number | null> {
+  try {
+    const nimiq = await getProvider()
+    const raw = await nimiq.request<unknown>({
+      method: 'getAccountByAddress',
+      params: [address],
+    })
+    if (!raw || typeof raw !== 'object') return null
+    const o = raw as Record<string, unknown>
+    const d = (o.data ?? o.result ?? o) as Record<string, unknown>
+    for (const k of ['balance', 'value', 'total']) {
+      const v = d[k]
+      if (typeof v === 'number' && Number.isFinite(v)) return v
+      if (typeof v === 'string' && Number.isFinite(Number(v))) return Number(v)
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 /** Consensus and height, for the verification strip. Never blocks the UI. */
 export async function chainStatus(): Promise<{ consensus: boolean; height: number } | null> {
   try {

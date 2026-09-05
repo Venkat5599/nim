@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Float from './routes/Float.svelte'
   import Pot from './routes/Pot.svelte'
   import Contribute from './routes/Contribute.svelte'
   import NewPot from './routes/NewPot.svelte'
@@ -26,7 +27,9 @@
   const r = $derived($route)
 </script>
 
-{#if r.name === 'contribute'}
+{#if r.name === 'float' || r.name === 'home'}
+  <Float />
+{:else if r.name === 'contribute'}
   <Contribute potId={r.potId} />
 {:else if r.name === 'pot'}
   <Pot potId={r.potId} />
@@ -35,5 +38,5 @@
 {:else if r.name === 'mine'}
   <MyPots />
 {:else}
-  <Pot potId={PUBLIC_POT} />
+  <Float />
 {/if}
